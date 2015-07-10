@@ -16,7 +16,5 @@ make clean      清除编译临时文件
     help                 print this help
     exit                 kill the client
     shutdown             shutdown the server
-例如:
-    put 112:quinn
-    
-    get 112
+
+
