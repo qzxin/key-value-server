@@ -1,10 +1,14 @@
 # key-value-server
 
 ##Build
-make :          编译server服务端
-make client :   编译client 客户端
-make clean_data 清除数据文件
-make clean      清除编译临时文件
+make :          编译server服务端；
+
+make client :   编译client 客户端；
+
+make clean_data 清除数据文件；
+
+make clean      清除编译临时文件；
+
 ##Run
 ### 首先运行 ./server
 ### 运行客户端 ./client 127.0.0.1 
