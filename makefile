@@ -1,4 +1,4 @@
-cc = g++ -g -std=c++11 -pthread -Wl,--no-as-needed -g -D_REENTRANT
+cc = g++ -g -O0 -std=c++11 -pthread -Wl,--no-as-needed -g -D_REENTRANT
 server_objects = server.o convert.o hash_cache.o
 
 server: $(server_objects)

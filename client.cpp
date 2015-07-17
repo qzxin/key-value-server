@@ -23,7 +23,7 @@ void printHelp();
 int main(int argc, char* argv[])
 {
 	if (argc < 2) {
-		printf("usage: ./client ip_address\n");
+		cout << "usage: ./client ip_address" << endl;
 		return 0;
 	}
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 	struct sockaddr_in server_addr;
 	//creat socket
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("Creat a socket error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "Creat a  socket error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
 	// initial socket
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 	server_addr.sin_port = htons(DEFAULT_PORT);
 	//int inet_pton(int af, const char *src, void *dst);  string to net address
 	if (inet_pton(AF_INET, argv[1], &server_addr.sin_addr) <= 0) {
-		printf("get address error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "get address error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
 
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 	}
 	
 	if (connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-		printf("connect error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "connect error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
 	
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 		fgets(sendline, MAX_LINE, stdin);
 		sendline[strlen(sendline)-1] = '\0';
 		if (send(socket_fd, sendline, strlen(sendline), 0) < 0) {
-			printf("send messege to server error: %s (errno: %d)\n", strerror(errno), errno);
+			cout << "send messege to server error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 			exit(0);
 		}
 		string send_str = sendline;
@@ -109,8 +109,8 @@ int main(int argc, char* argv[])
 void printHelp() {
 	cout << "get [key]            search a key from the server, get the key's value." << endl \
 	     << "put [key]-[value]    put or set a data node(key and value) into server." << endl \
-	     << "save_cache           save the server's cache data" << endl \
+	     << "save                 save the server's cache data" << endl \
 	     << "help                 print this help" << endl \
 	     << "exit                 kill the client" << endl \
-	     << "shutdown             shutdown the server" << endl;
+	     << "shutdown [passwd]    shutdown the server" << endl;
 }

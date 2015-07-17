@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 	int sin_addr_size = sizeof(server_addr);
 	// creat socket
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		printf("Creat a socket error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "Creat a socket error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
 	// init socket
@@ -60,19 +60,19 @@ int main(int argc, char* argv[])
 	}
 	//bind
 	if (bind(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-		printf("bind  socket error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "bind  socket error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
 	if (listen(socket_fd, 10) == -1) {
-		printf("listen socket error: %s (errno: %d)\n", strerror(errno), errno);
+		cout << "listen  socket error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 		exit(0);
 	}
-	printf("=====Waiting for clients's request=====\n");
+	cout << "=====Waiting for clients's request=====\n" << endl;
 	while(true) {
 		//accept默认会阻塞进程，直到有一个客户连接建立后返回，它返回的是一个新可用的套接字
 		if ((connected_fd = 
 			accept(socket_fd, (struct sockaddr*)&client_addr, (socklen_t*)&sin_addr_size)) == -1) {
-			printf("accept socket error: %s (errno: %d)\n", strerror(errno), errno);
+			cout << "accept  socket error: " << strerror(errno) << " (errno:" << errno << ")" << endl;
 			continue;
 		}
 		cout << "client " << connected_fd - 3 << " is connecting." << endl; // 0~2 is file_thread; 3 is main_thread;4 is the first client
@@ -143,7 +143,7 @@ static void handle_client_requests(int connected_fd)
 			cout << input_error_info << endl;
 		}
 		// 处理接受到的信息
-		printf("==================================================\n");
+		cout << "==================================================" << endl;
 	}
 	cout << "client " << connected_fd - 3 << " has exited" << endl;
 	close(connected_fd);
