@@ -24,18 +24,22 @@ public:
     int file_num_; // 页所对应的文件序号
     bool lock_;
     bool dirty_;  // 标记page是否被修改
+    bool is_putpape;
     class Node data_[PAGE_SIZE];  // 页包含的节点数据
     class Page* next;
     class Page* prev;
     Page() {
         lock_ = false;
         dirty_ = false;
+        is_putpape = false;
     }
 };
 
 HashCache::HashCache(int capacity) {
     // file_list_ = file_list;
-    new_file_index_ = load_new_file_index();
+    new_file_index_ = load_new_file_index(); // the next new file num.
+    load_key_file_map(); // load the map of key and its file from keyfile.
+    put_page = NULL;
     put_page_existed = false;
     // 为cache分配内存
     entries_ = new Page[capacity];
@@ -60,7 +64,7 @@ HashCache::~HashCache() {
     delete tail_;
 }
 
-// 查找 key ： 先在当前 hash_map 中查找，不成功则依次查找现有文件中的数据；
+// 查找 key ： 先在当前 hash_map 中查找;不成功则查找key_file_map,索引现有文件
 // 查找文件过程中，如果查找成功，则该文件中的数据保留到hash_map中，所属页链接到LRU双向链表头部；失败，则删除其对应的所有信息，恢复之前的状态
 // get 操作 和 put 操作 都要调用此函数
 HashCache::Node* HashCache::search(string key) {
@@ -73,27 +77,15 @@ HashCache::Node* HashCache::search(string key) {
         attach(page);
     }
     else {
-        // 优先遍历最新的文件
-        for (int file_num = new_file_index_; file_num >= 0; file_num--) {
-            if (file_accessed[file_num] == true)
-                continue;  // 该文件曾经存在或正存在于hash_map 中，跳过
-
-            page = get_new_page(); // 从空间中获取一个新page
-                                   // 将当前文件加载进page，并把数据插入到hash_map
-            if (load_file_to_page(file_num, page, hash_map) == FAILED) {
-                free_entries_.push_back(page); // 加载失败，重新将该page入栈
-                continue;
-            }
-
-            if (node = hash_map[key]) {
-                attach(page);
-                break;  // 已找到该节点
-            }
-            else {
-                // 该文件不含查找节点，释放掉该文件对应页
-                erase_page_of_cache(page, hash_map);
-                free_entries_.push_back(page);
-            }
+    	int file_num = key_file_map[key]; // 查找(key,filenum)映射表，如果表中不存在该 key，返回 0，否则返回该key对应的文件标号
+    	if (file_num == 0)
+    		return node;
+        page = get_new_page(); // 从空间中获取一个新page
+        if (load_file_to_page(file_num, page, hash_map) == FAILED) {
+            free_entries_.push_back(page); // 加载失败，重新将该page入栈
+        }
+        if (node = hash_map[key]) {
+            attach(page);
         }
     }
     return node;
@@ -122,8 +114,9 @@ void HashCache::put(string key, string value) {
     else {
         // server 不存在当前节点，写入put_page
         static int data_index = 0;
-        // 上一次的 put_page 没有写满，但是被弹出了，即 put_page 不存在，新的一页新的数据索引
+        // 上一次的 put_page 写满 或 被弹出了，即 put_page 不存在，新的一页新的数据索引
         if (data_index == PAGE_SIZE || put_page_existed == false) {
+        	push_key_to_keymap(put_page); // put_page 已满时，将put_page中的key，压入映射表
             data_index = 0;
         }
         if (data_index == 0 || put_page_existed == false) { //和上一语句代码冗余， put_page_existed == false 可以不存在，仅便于理解
@@ -132,6 +125,7 @@ void HashCache::put(string key, string value) {
             put_page_existed = true;
             put_page->file_num_ = ++new_file_index_; // put_page 对应文件序号
             put_page->dirty_ = true;
+            // initial node
             for (int i = 0; i < PAGE_SIZE; i++) {
                 put_page->data_[i].key_ = "";
                 put_page->data_[i].value_ = "";
@@ -187,7 +181,7 @@ int HashCache::load_new_file_index(const char* save_file_index) {
     ifstream input;
     input.open(save_file_index, ios::in);
     if (!input) {
-        return -1; // 不存在该文件，返回初始序号 -1
+        return 0;// 不存在该文件，返回初始序号0
     }
     int index;
     input >> index;
@@ -221,6 +215,7 @@ void HashCache::save_cache() {
         page = page->next;
     }
     save_new_file_index();
+    push_key_to_keymap(put_page);
 }
 
 void HashCache::detach(Page* page) {
@@ -244,8 +239,10 @@ HashCache::Page* HashCache::get_new_page() {
     if (free_entries_.empty() == true) {
         // cache 已满，从尾部取下一个page
         page = tail_->prev;
-        if (page == put_page)  // put_page 被顶出
+        if (page == put_page) {
             put_page_existed = false;
+        	push_key_to_keymap(page); // 该页将被弹出，保存key，file映射
+        } // put_page 被顶出
         if (page->dirty_ == true)
             save_page_to_file(page); // 保存该页，并从hash_map中删除该页
         erase_page_of_cache(page, hash_map);
@@ -255,4 +252,31 @@ HashCache::Page* HashCache::get_new_page() {
     page = free_entries_.back();
     free_entries_.pop_back();
     return page;
+}
+void HashCache::push_key_to_keymap(Page* &page, const char* key_filename) {
+	if (page == NULL)
+		return;
+	ofstream output;
+		// save to file (append)
+	output.open(key_filename, ios::app);
+
+	Node* data = page->data_;
+	int file_num = page->file_num_;
+	for (int i = 0; i < PAGE_SIZE; i++) {
+		key_file_map[data[i].key_] = file_num;
+		output << data[i].key_ << " " << file_num << endl;
+	}
+	output.close();
+}
+void HashCache::load_key_file_map(const char* key_filename) {
+	ifstream input;
+	input.open(key_filename, ios::in);
+	if (!input)
+		return;
+	string key;
+	int file_num;
+	while (input >> key >> file_num) {
+		key_file_map[key] = file_num;
+	}
+	input.close();
 }

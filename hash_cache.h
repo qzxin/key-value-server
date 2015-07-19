@@ -28,6 +28,7 @@ private:
     Page* entries_;
     vector<Page*> free_entries_;  // 存储空闲page
     unordered_map<string, Node* > hash_map; // 存储节点的散列表，以供快速查询
+    unordered_map<string, int> key_file_map; // 存储key和其对应文件间的映射
     Page* get_new_page(); // 得到新的一页，可处理没有空页的情况
     Page* put_page;  // 用以标记写入的page
     bool put_page_existed;  // 用于put_page被顶出之后的判断
@@ -45,6 +46,8 @@ private:
     int load_new_file_index(const char* save_file_index = "file_index.dat"); // 在该文件中存储着存储文件已经使用到第几个；加载失败返回-1
     void save_new_file_index(const char* save_file_index = "file_index.dat");  // 程序结束时，保存现在的文件序号到文件
 
+    void load_key_file_map(const char* key_filename = "key_file.dat"); // 加载 key 和 key存储文件的映射
+    void push_key_to_keymap(Page* &page, const char* key_filename = "key_file.dat"); // 将page中的所有（key, file_num_）推入key_dile_map,并存入文件
 public:
     HashCache(int capacity = CACHE_SIZE);
     ~HashCache();
